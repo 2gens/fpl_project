@@ -1,7 +1,27 @@
-# Python 
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python
 __pycache__/
-*.pyc 
-*.pyo 
-*.pyd
-*.venv/
-*.env/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Data files (on ne commit pas les grosses données)
+data/raw/*.csv
+data/raw/*.json
+data/processed/*.csv
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
