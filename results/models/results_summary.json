@@ -1,0 +1,32 @@
+{
+  "Linear Regression": {
+    "model": "Linear Regression",
+    "mae": 2.935411376602723,
+    "rmse": 3.6818017955864346,
+    "r2": 0.9468350260800938
+  },
+  "Ridge Regression": {
+    "model": "Ridge Regression",
+    "mae": 2.957262476668337,
+    "rmse": 3.7107748044200592,
+    "r2": 0.945994997181473
+  },
+  "Random Forest": {
+    "model": "Random Forest",
+    "mae": 3.5303339600232513,
+    "rmse": 4.481660723231472,
+    "r2": 0.9212260275946491
+  },
+  "XGBoost": {
+    "model": "XGBoost",
+    "mae": 3.27923321723938,
+    "rmse": 4.100985822554971,
+    "r2": 0.9340398907661438
+  },
+  "Gradient Boosting": {
+    "model": "Gradient Boosting",
+    "mae": 3.081412981632,
+    "rmse": 3.946877911972588,
+    "r2": 0.9389040840547156
+  }
+}
