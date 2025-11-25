@@ -64,7 +64,7 @@ class FPLModelTrainer:
         # Features à utiliser pour la prédiction
         feature_cols = [
             # Performance stats
-            'minutes', 'form', 'goals_per_90', 'assists_per_90',
+            'minutes', 'form', 'goals_per_90', 'assists_per_90', "momentum",
             
             # Indices
             'ict_index', 'influence', 'creativity', 'threat',
@@ -81,6 +81,9 @@ class FPLModelTrainer:
             
             # Set pieces
             'penalties_order', 'corners_and_indirect_freekicks_order',
+
+            # Expected stats
+            'expected_points_per_90',
         ]
         
         # Ajouter expected stats si disponibles

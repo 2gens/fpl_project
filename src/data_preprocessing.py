@@ -74,6 +74,16 @@ class FPLDataPreprocessor:
         # Filtrer : garder seulement ceux avec >= min_minutes
         df_filtered = df[df['minutes'] >= self.min_minutes].copy()
         
+        # Filtrer les joueurs blessés (chance_of_playing < 25%)
+        if 'chance_of_playing_this_round' in df_filtered.columns:
+            n_before_injury = len(df_filtered)
+            df_filtered = df_filtered[
+            (df_filtered['chance_of_playing_this_round'].isna()) | 
+            (df_filtered['chance_of_playing_this_round'] >= 25)].copy()
+        
+        n_injured = n_before_injury - len(df_filtered)
+        print(f"Joueurs blessés éliminés : {n_injured}")
+
         # Nombre de joueurs après filtrage
         n_after = len(df_filtered)
         n_removed = n_before - n_after
@@ -205,6 +215,32 @@ class FPLDataPreprocessor:
         print("Conversion des types numériques effectuée")
         
         n_new_vars = len([c for c in df.columns if c.endswith('_90') or c.endswith('_million') or c.endswith('_game')])
+
+        # 7. MOMENTUM SCORE - Détecte les joueurs en forme montante -> ii form > points_per_game → le joueur est en forme montante 
+    
+        df['momentum'] = df['form'] - df['points_per_game']
+    
+        print("Momentum calculé (form - points_per_game)")
+
+        # 8. Expected points basé sur xG et xA
+        if 'expected_goals' in df.columns and 'expected_assists' in df.columns:
+
+            df['expected_goals'] = pd.to_numeric(df['expected_goals'], errors='coerce').fillna(0)
+            df['expected_assists'] = pd.to_numeric(df['expected_assists'], errors='coerce').fillna(0)
+
+            df['expected_points_per_90'] = (
+                (df['expected_goals'] * 5) + 
+                (df['expected_assists'] * 3)
+            ) * 90 / df['minutes'].replace(0, 1)
+        
+            df['expected_points_per_90'] = df['expected_points_per_90'].fillna(0)
+        
+            print("Expected points per 90 calculé (xG + xA)")
+        else:
+            df['expected_points_per_90'] = 0
+            print("Attention : Expected stats non disponibles")
+    
+
         print(f"\n{n_new_vars} nouvelles variables créées")
         
         return df
@@ -324,15 +360,15 @@ class FPLDataPreprocessor:
             
             # Forme et indices
             'form', 'points_per_game', 'ict_index',
-            'influence', 'creativity', 'threat',
+            'influence', 'creativity', 'threat', 'momentum',
             
             # Set pieces
             'penalties_order', 'corners_and_indirect_freekicks_order',
             'direct_freekicks_order',
             
-            # Expected stats (si disponibles)
+            # Expected stats 
             'expected_goals', 'expected_assists', 'expected_goal_involvements',
-            'expected_goals_conceded',
+            'expected_goals_conceded','expected_points_per_90',
             
             # Variables calculées (feature engineering)
             'goals_per_90', 'assists_per_90', 'points_per_million',
