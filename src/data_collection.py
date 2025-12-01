@@ -12,16 +12,13 @@ import time
 
 
 class FPLDataCollector:
-    """
-    Classe pour collecter les données de l'API FPL.
-    """
     
     def __init__(self):
-        """Initialise le collecteur de données FPL."""
+        
         # URL de base de l'API officielle FPL
         self.base_url = "https://fantasy.premierleague.com/api"
         
-        # Créer une session pour réutiliser la connexion (plus efficace)
+        # Session pour réutiliser la connexion
         self.session = requests.Session()
         
         # Headers
@@ -45,7 +42,7 @@ class FPLDataCollector:
             # Vérifier si la requête a réussi (status code 200 = OK)
             response.raise_for_status()
             
-            print("Données récupérées avec succès!")
+            print("Données récupérées avec succès")
         
             data = response.json()
             
@@ -127,8 +124,7 @@ class FPLDataCollector:
         """
         Convertit les données des joueurs en DataFrame pandas.
         """
-        print("Conversion des données en DataFrame...")
-        
+
         # Extraire la liste des joueurs
         players = data['elements']
         
@@ -160,7 +156,7 @@ class FPLDataCollector:
     
     def get_next_gameweek(self, data: Dict) -> Optional[Dict]:
         """
-        DÉTECTE AUTOMATIQUEMENT LA PROCHAINE GAMEWEEK À PRÉDIRE.
+        Détecte la prochaine gameweek à prédire.
         """
         events = data['events']
         
@@ -172,12 +168,12 @@ class FPLDataCollector:
             current_events = [e for e in events if not e['finished']]
         
         if not current_events:
-            print("Attention: Toutes les gameweeks sont terminées (fin de saison?)")
+            print("Attention: Toutes les gameweeks sont terminées : fin de saison ")
             return None
         
         current = current_events[0]
         
-        # Trouver la PROCHAINE gameweek (celle qu'on va prédire).
+        # Trouver la prochaine gameweek, celle qu'on va prédire.
         if current['finished']:
             # La GW actuelle est finie, chercher la prochaine non terminée
             next_events = [e for e in events if e['id'] > current['id'] and not e['finished']]
@@ -213,30 +209,24 @@ class FPLDataCollector:
         """
         Fonction principale : collecte toutes les données nécessaires.
         """
-        print("=" * 60)
-        print("DÉBUT DE LA COLLECTE DES DONNÉES FPL")
-        print("=" * 60)
+        print("Collecte des données FPL")
         
-        # 1. Récupérer les données principales
+        # Récupérer les données principales
         bootstrap_data = self.fetch_bootstrap_static()
         if bootstrap_data is None:
             print("Échec de la collecte des données principales")
             return None
         
-        # 2. DÉTECTION AUTOMATIQUE DE LA GAMEWEEK
-        print("\n" + "=" * 60)
-        print("DÉTECTION DE LA GAMEWEEK À PRÉDIRE")
-        print("=" * 60)
+        # Détecter la prochaine gameweek
         gameweek_info = self.get_next_gameweek(bootstrap_data)
         if gameweek_info:
             print(f"\n{gameweek_info['status']}")
             print(f"Deadline: {gameweek_info['next_deadline']}")
         
-        # 3. Récupérer les fixtures
-        print("\n" + "=" * 60)
+        # Récupérer les fixtures
         fixtures_data = self.fetch_fixtures()
         
-        # 4. Compiler toutes les données
+        # Compiler toutes les données
         all_data = {
             'bootstrap': bootstrap_data,
             'fixtures': fixtures_data,
@@ -244,25 +234,20 @@ class FPLDataCollector:
             'collected_at': datetime.now().isoformat()
         }
         
-        # 5. Sauvegarder 
+        # Sauvegarder 
         if save_raw:
             self.save_raw_data(all_data, filename="fpl_latest.json")
         
-        print("\n" + "=" * 60)
-        print("COLLECTE TERMINÉE AVEC SUCCÈS!")
-        print("=" * 60)
+        print("Collecte des données terminée.")
         
         return all_data
 
 
 
-# FONCTIONS UTILITAIRES (pour faciliter l'utilisation)
+# Fonction utilitaire 
 
 def quick_collect() -> Optional[Dict]:
-    """
-    Fonction rapide pour collecter les données FPL.
-  
-    """
+    
     collector = FPLDataCollector()
     return collector.collect_all_data(save_raw=True)
 

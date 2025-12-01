@@ -11,9 +11,6 @@ from datetime import datetime
 
 
 class FPLDataPreprocessor:
-    """
-    Classe pour prétraiter les données FPL.
-    """
     
     def __init__(self, min_minutes: int = 60):
         self.min_minutes = min_minutes
@@ -25,7 +22,8 @@ class FPLDataPreprocessor:
         Charge les données brutes depuis un fichier JSON.
         """
         if filepath is None:
-            # Trouver le dossier racine du projet
+            
+            # Chemin par défaut 
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(current_dir)
             filepath = os.path.join(project_root, "data", "raw", "fpl_latest.json")
@@ -44,13 +42,9 @@ class FPLDataPreprocessor:
     
     def create_base_dataframe(self, raw_data: Dict) -> pd.DataFrame:
         """
-        Crée le DataFrame de base avec tous les joueurs.
+        DataFrame de base avec tous les joueurs.
         """
-        print("\n" + "=" * 60)
-        print("CRÉATION DU DATAFRAME DE BASE")
-        print("=" * 60)
-        
-        # Extraire les joueurs
+        # Extraire la liste des joueurs
         players = raw_data['bootstrap']['elements']
         df = pd.DataFrame(players)
         
@@ -63,10 +57,6 @@ class FPLDataPreprocessor:
         """
         Filtre pour garder seulement les joueurs ACTIFS.
         """
-        print("\n" + "=" * 60)
-        print(f"FILTRAGE DES JOUEURS ACTIFS (>= {self.min_minutes} min)")
-        print("=" * 60)
-        
         # Nombre de joueurs avant filtrage
         n_before = len(df)
         print(f"Joueurs avant filtrage : {n_before}")
@@ -118,70 +108,35 @@ class FPLDataPreprocessor:
         """
         Ajoute les noms des équipes en clair (Liverpool, Man City, etc.).
         """
-        # Créer le mapping team_id -> nom
+
+        # Extraire les équipes 
         teams = raw_data['bootstrap']['teams']
         team_map = {team['id']: team['name'] for team in teams}
         
-        # Ajouter la colonne team_name
+        # Mapper les noms d'équipes
         df['team_name'] = df['team'].map(team_map)
         
         print("Noms d'équipes ajoutés")
         return df
     
-    def show_sample(self, df: pd.DataFrame, n: int = 10):
-        """
-        Affiche un échantillon du DataFrame pour vérification.
-        """
-        print("\n" + "=" * 60)
-        print(f"APERÇU DES DONNÉES (Top {n} par points totaux)")
-        print("=" * 60)
-        
-        # Colonnes importantes à afficher
-        cols_to_show = [
-            'web_name', 'team_name', 'position', 
-            'total_points', 'minutes', 'goals_scored', 
-            'assists', 'form', 'now_cost'
-        ]
-        
-        # Sélectionner les colonnes qui existent
-        available_cols = [col for col in cols_to_show if col in df.columns]
-        
-        # Trier par points totaux et afficher
-        sample = df.nlargest(n, 'total_points')[available_cols]
-        
-        # Convertir le prix (divisé par 10 dans l'API)
-        if 'now_cost' in sample.columns:
-            sample = sample.copy()
-            sample['now_cost'] = sample['now_cost'] / 10
-        
-        print(sample.to_string(index=False))
-        print()
-    
     def engineer_performance_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        FEATURE ENGINEERING - PARTIE 1 : PERFORMANCES
+        Feature des performances des joueurs
         """
-        print("\n" + "=" * 60)
-        print("FEATURE ENGINEERING - PERFORMANCES")
-        print("=" * 60)
-        
         df = df.copy()
-        
-        # 1. Prix en £M (plus lisible que divisé par 10)
+    
+        # Convertir le coût en prix réel
         df['price'] = df['now_cost'] / 10
-        print("Prix converti en £M")
-        
-        # 2. Goals per 90 minutes
-        # Formule : (goals * 90) / minutes_jouées
-        # Si 0 minutes, mettre 0
+    
+        # Goals per 90 min 
         df['goals_per_90'] = np.where(
             df['minutes'] > 0,
             (df['goals_scored'] * 90) / df['minutes'],
             0
         )
         print("Goals per 90 calculé")
-        
-        # 3. Assists per 90 minutes
+
+        # Assists per 90 min (assist = passe décisive)
         df['assists_per_90'] = np.where(
             df['minutes'] > 0,
             (df['assists'] * 90) / df['minutes'],
@@ -189,8 +144,7 @@ class FPLDataPreprocessor:
         )
         print("Assists per 90 calculé")
         
-        # 4. Points per game (moyenne par match joué)
-        # Un match = environ 90 minutes, donc appearances ≈ minutes / 90
+        # Points per game
         df['appearances'] = (df['minutes'] / 90).round()
         df['points_per_game'] = np.where(
             df['appearances'] > 0,
@@ -198,14 +152,12 @@ class FPLDataPreprocessor:
             0
         )
         print("Points per game calculé")
-        
-        # 5. Points per million (VALUE)
-        # Métrique clé pour trouver les bons plans
+       
+        # Métrique clé pour trouver les bons plans -> Value (Points per million)
         df['points_per_million'] = df['total_points'] / df['price']
-        print("Points per million calculé (VALUE)")
+        print("Points per million calculé (Value)")
         
-        # 6. Convertir les colonnes de type string en float si nécessaire
-        # (form et ict_index sont parfois en string dans l'API)
+        # Convertir les colonnes de type string en float si nécessaire
         if df['form'].dtype == 'object':
             df['form'] = pd.to_numeric(df['form'], errors='coerce').fillna(0)
         
@@ -216,13 +168,13 @@ class FPLDataPreprocessor:
         
         n_new_vars = len([c for c in df.columns if c.endswith('_90') or c.endswith('_million') or c.endswith('_game')])
 
-        # 7. MOMENTUM SCORE - Détecte les joueurs en forme montante -> ii form > points_per_game → le joueur est en forme montante 
+        # Momentum score : Détecte les joueurs en forme montante ou descendante
     
         df['momentum'] = df['form'] - df['points_per_game']
     
         print("Momentum calculé (form - points_per_game)")
 
-        # 8. Expected points basé sur xG et xA
+        # Expected points basé sur xG et xA
         if 'expected_goals' in df.columns and 'expected_assists' in df.columns:
 
             df['expected_goals'] = pd.to_numeric(df['expected_goals'], errors='coerce').fillna(0)
@@ -249,14 +201,14 @@ class FPLDataPreprocessor:
     
     def engineer_fixture_features(self, df: pd.DataFrame, raw_data: Dict) -> pd.DataFrame:
         """
-        FEATURE ENGINEERING - PARTIE 2 : FIXTURES (DIFFICULTÉ)      
-        Calcule la difficulté des prochains matchs pour chaque joueur.
+        Feature des matchs : Calculer la difficulté des prochains matchs pour chaque joueur.
         """
-        print("\n" + "=" * 60)
-        print("FEATURE ENGINEERING - FIXTURES & DIFFICULTÉ")
-        print("=" * 60)
+        print("Feature des fixtures ")
+    
         
         df = df.copy()
+
+        #Extraire les fixtures
         fixtures = raw_data['fixtures']
         gameweek_info = raw_data.get('gameweek_info', {})
         
@@ -267,7 +219,7 @@ class FPLDataPreprocessor:
         next_gw = gameweek_info['next_gw']
         print(f"Calcul pour GW{next_gw}")
         
-        # Filtrer les fixtures pour la prochaine gameweek
+        # Fixtures pour la prochaine gameweek
         next_fixtures = [f for f in fixtures if f['event'] == next_gw]
         
         print(f"{len(next_fixtures)} matchs trouvés pour GW{next_gw}")
@@ -329,17 +281,17 @@ class FPLDataPreprocessor:
             if difficulties:
                 team_avg_difficulty[team_id] = np.mean(difficulties)
             else:
-                team_avg_difficulty[team_id] = 3  # Moyenne par défaut
+                team_avg_difficulty[team_id] = 3  
         
         df['avg_fixture_difficulty_5'] = df['team'].map(team_avg_difficulty)
         
         print("Difficulté moyenne sur 5 matchs ajoutée")
 
-         # Recent Performance Score -> Combine form récente, expected stats et fiabilité
+        # Recent Performance Score -> Combine form récente, expected stats et fiabilité
         df['recent_performance_score'] = (
-            df['form'] * 0.5 +                      # 50% forme récente 
-            df['expected_points_per_90'] * 0.3 +    # 30% expected stats (xG/xA)
-            df['points_per_game'] * 0.2             # 20% fiabilité saison
+            df['form'] * 0.5 +                      
+            df['expected_points_per_90'] * 0.3 +   
+            df['points_per_game'] * 0.2          
         )
     
         # Ajuster selon la difficulté du prochain match
@@ -357,10 +309,7 @@ class FPLDataPreprocessor:
         """
         Sélectionne uniquement les colonnes importantes pour le ML.
         """
-        print("\n" + "=" * 60)
-        print("SÉLECTION DES COLONNES IMPORTANTES")
-        print("=" * 60)
-        
+
         # Colonnes à garder
         important_cols = [
             # Identité
@@ -410,15 +359,14 @@ class FPLDataPreprocessor:
         """
         Sauvegarde les données nettoyées en CSV dans data/processed/.
         """
-        # Trouver le dossier racine du projet
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(current_dir)
         
-        # Créer le dossier data/processed s'il n'existe pas
         data_dir = os.path.join(project_root, "data", "processed")
         os.makedirs(data_dir, exist_ok=True)
         
-        # Générer un nom de fichier si non fourni
+        # Générer un nom de fichier
         if filename is None:
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"players_processed_{timestamp}.csv"
@@ -434,55 +382,41 @@ class FPLDataPreprocessor:
         return filepath
 
 
-# FONCTIONS UTILITAIRES
-
+# Fonction utilitaire
 
 def quick_preprocess(min_minutes: int = 60, save: bool = True) -> Optional[pd.DataFrame]:
-    """
-    Fonction rapide pour prétraiter COMPLÈTEMENT les données.
-    """
-    print("\n" + "=" * 60)
-    print("PREPROCESSING COMPLET DES DONNÉES FPL")
-    print("=" * 60)
-    
+  
     preprocessor = FPLDataPreprocessor(min_minutes=min_minutes)
     
-    # 1. Charger les données brutes
+    # Charger les données brutes
     raw_data = preprocessor.load_raw_data()
     if raw_data is None:
         return None
     
-    # 2. Créer le DataFrame de base
+    # Créer le DataFrame de base
     df = preprocessor.create_base_dataframe(raw_data)
     
-    # 3. Filtrer les joueurs actifs
+    # Filtrer les joueurs actifs
     df = preprocessor.filter_active_players(df)
     
-    # 4. Ajouter les noms (positions et équipes)
+    # Ajouter les noms (positions et équipes)
     df = preprocessor.add_position_names(df, raw_data)
     df = preprocessor.add_team_names(df, raw_data)
     
-    # 5. Feature Engineering - Performances
+    # Feature Performances
     df = preprocessor.engineer_performance_features(df)
     
-    # 6. Feature Engineering - Fixtures
+    # Feature Fixtures
     df = preprocessor.engineer_fixture_features(df, raw_data)
     
-    # 7. Sélectionner les colonnes importantes
+    # Sélectionner les colonnes importantes
     df = preprocessor.select_important_columns(df)
     
-    # 8. Afficher un échantillon
-    preprocessor.show_sample(df, n=10)
-    
-    # 9. Sauvegarder si demandé
+    # Sauvegarder les données nettoyées
     if save:
-        print("\n" + "=" * 60)
-        print("SAUVEGARDE DES DONNÉES")
-        print("=" * 60)
+        print("Sauvegarde des données nettoyées...")
         preprocessor.save_processed_data(df, filename="players_cleaned.csv")
     
-    print("\n" + "=" * 60)
-    print("PREPROCESSING TERMINÉ AVEC SUCCÈS")
-    print("=" * 60)
+    print("Preprocessing terminé.")
     
     return df

@@ -1,5 +1,5 @@
 """
-FPL Machine Learning Models Module
+FPL Machine Learning Models Trainer
 """
 import pandas as pd
 import numpy as np
@@ -17,26 +17,20 @@ import pickle
 
 
 class FPLModelTrainer:
-    """
-    Classe pour entraîner et évaluer les modèles de prédiction FPL.
-    """
     
     def __init__(self, random_state: int = 42):
-        """
-        Initialise le trainer.
-        """
+
         self.random_state = random_state
         self.models = {}
         self.scaler = StandardScaler()
         self.feature_names = None
         self.results = {}
         
-        print("Model Trainer initialisé")
         print(f"Random state : {random_state}")
     
     def load_processed_data(self, filepath: str = None) -> pd.DataFrame:
         """
-        Charge les données preprocessées depuis le CSV.
+        Charge les données nettoyées.
         """
         if filepath is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -55,13 +49,10 @@ class FPLModelTrainer:
     
     def select_features(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        Sélectionne les features (X) et la target (y) pour le ML. Target = total_points (ce qu'on veut prédire)
+        Sélectionne les features (X) et la target (y) pour le ML. 
         """
-        print("\n" + "=" * 60)
-        print("SÉLECTION DES FEATURES POUR LE ML")
-        print("=" * 60)
-        
-        # Features à utiliser pour la prédiction
+        print("Sélection des features et de la target...")
+
         feature_cols = [
             # Performance stats
             'minutes', 'form', 'goals_per_90', 'assists_per_90', "momentum",
@@ -92,7 +83,6 @@ class FPLModelTrainer:
         if 'expected_assists' in df.columns:
             feature_cols.append('expected_assists')
         
-        # Garder seulement les colonnes qui existent
         available_features = [col for col in feature_cols if col in df.columns]
         
         # Créer X (features) et y (target)
@@ -115,9 +105,8 @@ class FPLModelTrainer:
         """
         Sépare les données en train/test sets.
         """
-        print("\n" + "=" * 60)
-        print("SÉPARATION TRAIN/TEST")
-        print("=" * 60)
+        print("Séparation des données en train/test sets...")
+      
         
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=self.random_state
@@ -130,7 +119,7 @@ class FPLModelTrainer:
     
     def scale_features(self, X_train: pd.DataFrame, X_test: pd.DataFrame) -> Tuple:
         """
-        Normalise les features (standardisation).
+        Normalisation des features (standardisation).
         """
         print("\nNormalisation des features...")
         
@@ -138,7 +127,7 @@ class FPLModelTrainer:
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
         
-        # Reconvertir en DataFrame pour garder les noms de colonnes
+        # DataFrame pour garder les noms de colonnes
         X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns, index=X_train.index)
         X_test_scaled = pd.DataFrame(X_test_scaled, columns=X_test.columns, index=X_test.index)
         
@@ -150,9 +139,8 @@ class FPLModelTrainer:
         """
         Entraîne le modèle Linear Regression (baseline).
         """
-        print("\n" + "=" * 60)
-        print("ENTRAÎNEMENT : LINEAR REGRESSION")
-        print("=" * 60)
+        
+        print("Entrainement : Linear Regression")
         
         model = LinearRegression()
         model.fit(X_train, y_train)
@@ -166,10 +154,9 @@ class FPLModelTrainer:
         """
         Entraîne le modèle Ridge Regression (régularisation L2).
         """
-        print("\n" + "=" * 60)
-        print("ENTRAÎNEMENT : RIDGE REGRESSION")
-        print("=" * 60)
-        
+    
+        print("Entrainement : Ridge Regression")
+     
         model = Ridge(alpha=alpha, random_state=self.random_state)
         model.fit(X_train, y_train)
         
@@ -182,16 +169,14 @@ class FPLModelTrainer:
         """
         Entraîne le modèle Random Forest.
         """
-        print("\n" + "=" * 60)
-        print("ENTRAÎNEMENT : RANDOM FOREST")
-        print("=" * 60)
+        print("Entrainement : Random Forest")
         
         model = RandomForestRegressor(
             n_estimators=n_estimators,
             max_depth=10,
             min_samples_split=5,
             random_state=self.random_state,
-            n_jobs=-1  # Utiliser tous les CPU
+            n_jobs=-1  
         )
         model.fit(X_train, y_train)
         
@@ -204,9 +189,7 @@ class FPLModelTrainer:
         """
         Entraîne le modèle XGBoost.
         """
-        print("\n" + "=" * 60)
-        print("ENTRAÎNEMENT : XGBOOST")
-        print("=" * 60)
+        print("Entrainement : XGBoost")
         
         model = xgb.XGBRegressor(
             n_estimators=n_estimators,
@@ -226,9 +209,7 @@ class FPLModelTrainer:
         """
         Entraîne le modèle Gradient Boosting.
         """
-        print("\n" + "=" * 60)
-        print("ENTRAÎNEMENT : GRADIENT BOOSTING")
-        print("=" * 60)
+        print("Entrainement : Gradient Boosting")
         
         model = GradientBoostingRegressor(
             n_estimators=n_estimators,
@@ -269,11 +250,11 @@ class FPLModelTrainer:
     
     def cross_validate_model(self, model, X, y, model_name: str, cv: int = 5) -> Dict:
         """
-        Effectue une validation croisée pour tester la robustesse du modèle.
+        Validation croisée pour tester la robustesse du modèle.
         """
         print(f"\nValidation croisée ({cv}-fold) pour {model_name}...")
         
-        # Scoring avec MAE (négatif dans sklearn, donc on prend l'opposé)
+        # MAE comme métrique
         scores = cross_val_score(model, X, y, cv=cv, scoring='neg_mean_absolute_error', n_jobs=-1)
         mae_scores = -scores  # Convertir en positif
         
@@ -300,12 +281,11 @@ class FPLModelTrainer:
         
         model = self.models[model_name]
         
-        # Vérifier si le modèle a feature_importances_
         if not hasattr(model, 'feature_importances_'):
             print(f"Le modèle {model_name} n'a pas de feature importance")
             return None
         
-        # Créer DataFrame avec importance
+        # DataFrame des importances
         importance_df = pd.DataFrame({
             'feature': self.feature_names,
             'importance': model.feature_importances_
@@ -315,17 +295,16 @@ class FPLModelTrainer:
     
     def print_results_summary(self):
         """
-        Affiche un résumé comparatif de tous les modèles.
+        Résumé comparatif de tous les modèles.
         """
-        print("\n" + "=" * 60)
-        print("RÉSUMÉ DES RÉSULTATS - COMPARAISON DES MODÈLES")
-        print("=" * 60)
+        print("Résumé des performances des modèles")
+        
         
         if not self.results:
             print("Aucun résultat disponible")
             return
         
-        # Créer DataFrame pour comparaison
+        # DataFrame pour comparaison
         results_df = pd.DataFrame(self.results).T
         results_df = results_df.sort_values('mae')
         
@@ -369,70 +348,50 @@ class FPLModelTrainer:
         print(f"Résultats sauvegardés : {results_file}")
 
 
-# FONCTIONS UTILITAIRES
+# Fonction utilitaire
 
 def train_all_models(min_minutes: int = 60, test_size: float = 0.2) -> FPLModelTrainer:
-    """
-    Fonction complète pour entraîner tous les modèles.
-    """
-    print("\n" + "=" * 60)
-    print("ENTRAÎNEMENT COMPLET DES MODÈLES FPL")
-    print("=" * 60)
-    
-    # 1. Initialiser le trainer
+
     trainer = FPLModelTrainer(random_state=42)
     
-    # 2. Charger les données
     df = trainer.load_processed_data()
     if df is None:
         return None
     
-    # 3. Sélectionner features et target
     X, y = trainer.select_features(df)
     
-    # 4. Split train/test
+    # Split train/test
     X_train, X_test, y_train, y_test = trainer.split_data(X, y, test_size=test_size)
     
-    # 5. Normaliser les features
     X_train_scaled, X_test_scaled = trainer.scale_features(X_train, X_test)
     
-    # 6. Entraîner tous les modèles
-    print("\n" + "=" * 60)
-    print("ENTRAÎNEMENT DES 5 MODÈLES")
-    print("=" * 60)
-    
-    # Linear Regression (avec features normalisées)
+    #Regression Linéaire
     lr_model = trainer.train_linear_regression(X_train_scaled, y_train)
     lr_results = trainer.evaluate_model(lr_model, X_test_scaled, y_test, 'Linear Regression')
     print(f"MAE : {lr_results['mae']:.2f}, RMSE : {lr_results['rmse']:.2f}, R² : {lr_results['r2']:.3f}")
     
-    # Ridge Regression (avec features normalisées)
+    # Ridge Regression 
     ridge_model = trainer.train_ridge_regression(X_train_scaled, y_train, alpha=1.0)
     ridge_results = trainer.evaluate_model(ridge_model, X_test_scaled, y_test, 'Ridge Regression')
     print(f"MAE : {ridge_results['mae']:.2f}, RMSE : {ridge_results['rmse']:.2f}, R² : {ridge_results['r2']:.3f}")
     
-    # Random Forest (features non normalisées, meilleur pour les arbres)
+    # Random Forest 
     rf_model = trainer.train_random_forest(X_train, y_train, n_estimators=100)
     rf_results = trainer.evaluate_model(rf_model, X_test, y_test, 'Random Forest')
     print(f"MAE : {rf_results['mae']:.2f}, RMSE : {rf_results['rmse']:.2f}, R² : {rf_results['r2']:.3f}")
     
-    # XGBoost (features non normalisées)
+    # XGBoost 
     xgb_model = trainer.train_xgboost(X_train, y_train, n_estimators=100)
     xgb_results = trainer.evaluate_model(xgb_model, X_test, y_test, 'XGBoost')
     print(f"MAE : {xgb_results['mae']:.2f}, RMSE : {xgb_results['rmse']:.2f}, R² : {xgb_results['r2']:.3f}")
     
-    # Gradient Boosting (features non normalisées)
+    # Gradient Boosting 
     gb_model = trainer.train_gradient_boosting(X_train, y_train, n_estimators=100)
     gb_results = trainer.evaluate_model(gb_model, X_test, y_test, 'Gradient Boosting')
     print(f"MAE : {gb_results['mae']:.2f}, RMSE : {gb_results['rmse']:.2f}, R² : {gb_results['r2']:.3f}")
     
-    # 7. Afficher le résumé
     trainer.print_results_summary()
     
-    # 8. Feature importance pour les meilleurs modèles
-    print("\n" + "=" * 60)
-    print("FEATURE IMPORTANCE (TOP 10)")
-    print("=" * 60)
     
     for model_name in ['Random Forest', 'XGBoost', 'Gradient Boosting']:
         print(f"\n{model_name} :")
@@ -440,14 +399,9 @@ def train_all_models(min_minutes: int = 60, test_size: float = 0.2) -> FPLModelT
         if importance_df is not None:
             print(importance_df.to_string(index=False))
     
-    # 9. Sauvegarder les modèles
-    print("\n" + "=" * 60)
-    print("SAUVEGARDE DES MODÈLES")
-    print("=" * 60)
+    print("Sauvegarde des modèles entraînés...")
     trainer.save_models()
-    
-    print("\n" + "=" * 60)
-    print("ENTRAÎNEMENT TERMINÉ AVEC SUCCÈS")
-    print("=" * 60)
+
+    print("Entrainement terminé.")
     
     return trainer

@@ -1,5 +1,5 @@
 """
-Test du préprocessing FPL - COMPLET
+Test du préprocessing FPL 
 """
 
 import sys
@@ -12,29 +12,17 @@ from src.data_preprocessing import quick_preprocess
 
 
 def main():
-    """Test complet du preprocessing."""
     
-    print("TEST DU PREPROCESSING COMPLET")
-    print("=" * 60)
-    print("Étapes :")
-    print("   1. Charger les données brutes")
-    print("   2. Filtrer les joueurs actifs (>= 60 minutes)")
-    print("   3. Feature Engineering - Performances")
-    print("   4. Feature Engineering - Fixtures")
-    print("   5. Sauvegarder en CSV")
-    print("=" * 60)
-    print()
+    print("Test du preprocessing des données FPL")
     
-    # Lancer le preprocessing complet
+     # Lancer le preprocessing complet
     df = quick_preprocess(min_minutes=60, save=True)
     
     if df is not None:
-        print("\n" + "=" * 60)
-        print("PREPROCESSING RÉUSSI !")
-        print("=" * 60)
+        print("Préprocessing réussi !")
         
         # Statistiques finales
-        print(f"\nSTATISTIQUES FINALES :")
+        print(f"\nStatistiques finales :")
         print(f"   • Joueurs actifs : {len(df)}")
         print(f"   • Variables : {len(df.columns)}")
         
@@ -53,7 +41,6 @@ def main():
             print(f"      → {row['total_points']} pts = {row['points_per_million']:.2f} pts/£M")
         
         print(f"\nFichier sauvegardé : data/processed/players_cleaned.csv")
-        print(f"Tu peux maintenant l'ouvrir dans Excel pour voir toutes les données !")
         
     else:
         print("\nÉchec du preprocessing")

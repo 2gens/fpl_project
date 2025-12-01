@@ -19,14 +19,9 @@ from datetime import datetime
 
 
 class FPLExploratoryAnalysis:
-    """
-    Classe pour l'analyse exploratoire des données FPL.
-    """
-    
+  
     def __init__(self, output_dir: str = None):
-        """
-        Initialise l'analyseur EDA.
-        """
+
         if output_dir is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             project_root = os.path.dirname(current_dir)
@@ -43,7 +38,7 @@ class FPLExploratoryAnalysis:
     
     def load_data(self, filepath: str = None) -> pd.DataFrame:
         """
-        Charge les données preprocessées.
+        Charger les données preprocessées.
         """
         if filepath is None:
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -335,7 +330,7 @@ class FPLExploratoryAnalysis:
         Génère tous les graphiques.
         """
         
-        print("GÉNÉRATION DE TOUS LES GRAPHIQUES")
+        print("Génération de tous les graphiques EDA.")
         
         self.plot_points_distribution_by_position(df)
         self.plot_top_players(df, n=15)
@@ -345,19 +340,16 @@ class FPLExploratoryAnalysis:
         self.plot_value_analysis(df, n=15)
         self.plot_fixture_difficulty(df)
         
-        
-        print("TOUS LES GRAPHIQUES ONT ÉTÉ GÉNÉRÉS")
         print(f"Figures sauvegardées dans : {self.output_dir}")
         
 
 
-# FONCTIONS UTILITAIRES
+# Fonction utilitaire
 
 def quick_eda():
     
-    print("ANALYSE EXPLORATOIRE DES DONNÉES FPL")
+    print("Analyse exploratoire des données FPL")
     
-    # Initialiser l'analyseur
     eda = FPLExploratoryAnalysis()
     
     # Charger les données
