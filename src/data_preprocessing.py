@@ -242,8 +242,10 @@ class FPLDataPreprocessor:
     
 
         print(f"\n{n_new_vars} nouvelles variables créées")
-        
+    
+    
         return df
+        
     
     def engineer_fixture_features(self, df: pd.DataFrame, raw_data: Dict) -> pd.DataFrame:
         """
@@ -332,6 +334,22 @@ class FPLDataPreprocessor:
         df['avg_fixture_difficulty_5'] = df['team'].map(team_avg_difficulty)
         
         print("Difficulté moyenne sur 5 matchs ajoutée")
+
+         # Recent Performance Score -> Combine form récente, expected stats et fiabilité
+        df['recent_performance_score'] = (
+            df['form'] * 0.5 +                      # 50% forme récente 
+            df['expected_points_per_90'] * 0.3 +    # 30% expected stats (xG/xA)
+            df['points_per_game'] * 0.2             # 20% fiabilité saison
+        )
+    
+        # Ajuster selon la difficulté du prochain match
+        fixture_adjustment = df['next_fixture_difficulty'].apply(
+            lambda x: 1.2 if x <= 2 else 1.0 if x == 3 else 0.85
+        )
+    
+        df['recent_performance_score'] = df['recent_performance_score'] * fixture_adjustment
+    
+        print("Recent performance score calculé (target pour ML)")
         
         return df
     
@@ -371,7 +389,7 @@ class FPLDataPreprocessor:
             'expected_goals_conceded','expected_points_per_90',
             
             # Variables calculées (feature engineering)
-            'goals_per_90', 'assists_per_90', 'points_per_million',
+            'goals_per_90', 'assists_per_90', 'points_per_million','recent_performance_score',
             
             # Fixtures
             'next_fixture_difficulty', 'next_fixture_opponent', 

@@ -97,14 +97,14 @@ class FPLModelTrainer:
         
         # Créer X (features) et y (target)
         X = df[available_features].copy()
-        y = df['total_points'].copy()
+        y = df['recent_performance_score'].copy()
         
         # Gérer les valeurs manquantes
         X = X.fillna(0)
         
         print(f"Features sélectionnées : {len(available_features)}")
         print(f"Features : {', '.join(available_features)}")
-        print(f"\nTarget : total_points")
+        print(f"\nTarget :recent_performance_score (forme récente + xG/xA + fiabilité) ")
         print(f"Nombre d'exemples : {len(X)}")
         
         self.feature_names = available_features

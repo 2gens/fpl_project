@@ -215,21 +215,25 @@ class FPLPredictor:
         # Ajustements basé sur forme et momentum
         print("Application des ajustements forme/momentum...")
     
-        high_momentum_boost = 1 + (df_pred['momentum'].clip(lower=0) * 0.15)
+        high_momentum_boost = 1 + (df_pred['momentum'].clip(lower=0) * 0.08)
         low_momentum_penalty = df_pred.apply(
             lambda row: 0.95 if row['momentum'] < -1 and row['total_points'] >= 100 
-                        else 0.85 if row['momentum'] < -1 
+                        else 0.9 if row['momentum'] < -1 
                         else 1.0,
             axis=1
         )
     
-        form_boost = 1 + ((df_pred['form'] - 5).clip(lower=0) * 0.08)
+        form_boost = 1 + ((df_pred['form'] - 5).clip(lower=0) * 0.05)
     
         median_points = df_pred['total_points'].median()
         max_points = df_pred['total_points'].max()
         proven_boost = 1 + (
             (df_pred['total_points'] - median_points).clip(lower=0) / 
-            max_points * 0.25  # +25% max pour les top scorers
+            max_points * 0.15  
+        )
+
+        fixture_boost = df_pred['next_fixture_difficulty'].apply(
+            lambda x: 1.15 if x <= 2 else 1.0 if x == 3 else 0.95
         )
     
         # Appliquer tous les ajustements
@@ -238,7 +242,8 @@ class FPLPredictor:
             high_momentum_boost * 
             low_momentum_penalty * 
             form_boost *
-            proven_boost
+            proven_boost*
+            fixture_boost
         )
     
         print("Ajustements appliqués :")
@@ -255,6 +260,114 @@ class FPLPredictor:
     
         return df_pred
     
+    def predict_points_formula(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Prédit les points avec une FORMULE PONDÉRÉE.
+        """
+        print("PRÉDICTION AVEC FORMULE PONDÉRÉE")
+   
+        df_pred = df.copy()
+    
+        # Normaliser les variables (0-10 scale)
+        form_normalized = df_pred['form'].clip(0, 10)
+    
+        expected_normalized = df_pred['expected_points_per_90'].clip(0, 10)
+    
+        ppg_normalized = df_pred['points_per_game'].clip(0, 10)
+    
+        # Fixture bonus (match facile = bonus)
+        fixture_bonus = df_pred['next_fixture_difficulty'].apply(
+            lambda x: 2.0 if x <= 2 else 0.5 if x == 3 else -1.0
+        )
+    
+        # Momentum bonus
+        momentum_bonus = df_pred['momentum'].clip(-3, 3)
+    
+        # FORMULE FINALE
+        df_pred['predicted_points'] = (
+            (0.35 * form_normalized) +
+            (0.25 * expected_normalized) +
+            (0.20 * ppg_normalized) +
+            (0.10 * fixture_bonus) +
+            (0.10 * momentum_bonus)
+        )
+    
+        # Bonus pour top scorers (fiabilité)
+        proven_multiplier = 1 + (
+            (df_pred['total_points'] - df_pred['total_points'].median()).clip(lower=0) / 
+            df_pred['total_points'].max() * 0.3
+        )
+    
+        df_pred['predicted_points'] = df_pred['predicted_points'] * proven_multiplier
+    
+        # Value
+        df_pred['predicted_value'] = df_pred['predicted_points'] / df_pred['price']
+
+        print(f"\nPrédictions effectuées pour {len(df_pred)} joueurs")
+    
+        return df_pred
+    
+    def predict_points_ml(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+         Prédit les points avec MACHINE LEARNING .
+        """
+   
+        print("PRÉDICTION AVEC MACHINE LEARNING")
+  
+        # Charger les 3 meilleurs modèles
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        models_dir = os.path.join(project_root, "results", "models")
+    
+        # Poids de chaque modèle
+        models_to_load = {
+            'xgboost': 0.5,
+            'random_forest': 0.3,
+            'gradient_boosting': 0.2
+        }
+    
+        # Préparer les features
+        X = self.prepare_features(df)
+    
+        # Prédictions pondérées
+        predictions_weighted = np.zeros(len(X))
+        models_loaded = 0
+    
+        print("\nChargement et prédiction des modèles ML :")
+    
+        for model_name, weight in models_to_load.items():
+            model_path = os.path.join(models_dir, f"{model_name}.pkl")
+        
+            if os.path.exists(model_path):
+                with open(model_path, 'rb') as f:
+                    model = pickle.load(f)
+            
+                predictions = model.predict(X)
+                predictions_weighted += predictions * weight
+                models_loaded += 1
+            
+                print(f"  - {model_name.capitalize()} : poids {weight*100:.0f}%")
+            else:
+                print(f"  - {model_name.capitalize()} : non trouvé")
+    
+        if models_loaded == 0:
+            print("\nErreur : Aucun modèle trouvé !")
+            return df
+    
+        print(f"\n{models_loaded} modèles utilisés")
+    
+        # Créer le DataFrame de prédiction
+        df_pred = df.copy()
+    
+        # Les prédictions sont déjà des scores récents (pas besoin de normaliser)
+        df_pred['predicted_points'] = predictions_weighted
+    
+        # Value
+        df_pred['predicted_value'] = df_pred['predicted_points'] / df_pred['price']
+    
+        print(f"\nPrédictions ML effectuées pour {len(df_pred)} joueurs")
+    
+        return df_pred
     
     def get_top_players(self, df_pred: pd.DataFrame, n: int = 20, 
                    sort_by: str = 'predicted_points') -> pd.DataFrame:
@@ -429,7 +542,7 @@ def quick_predict(model_name: str = 'XGBoost', top_n: int = 20) -> Optional[pd.D
         return None
     
     # 4. Faire les prédictions
-    df_pred = predictor.predict_points_ensemble(df)
+    df_pred = predictor.predict_points_formula(df)
     
     # 5. Afficher les top joueurs
     predictor.print_top_players(df_pred, n=top_n)
