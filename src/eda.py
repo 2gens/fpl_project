@@ -58,6 +58,12 @@ class FPLExploratoryAnalysis:
         print("\nCréation du graphique : Distribution des points par position")
         
         fig, ax = plt.subplots(figsize=(12, 6))
+
+
+        # Couleur de fond personnalisée
+        bg_color1 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color1)  
+        ax.set_facecolor("#dfe9e4ff")
         
         # Boxplot par position
         positions = ['GKP', 'DEF', 'MID', 'FWD']
@@ -80,7 +86,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, 'points_distribution_by_position.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color1)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()
@@ -94,6 +100,11 @@ class FPLExploratoryAnalysis:
         top_players = df.nlargest(n, 'total_points')[['web_name', 'total_points', 'position']].copy()
         
         fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Couleur de fond personnalisée
+        bg_color2 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color2)  
+        ax.set_facecolor("#dfe9e4ff")
         
         # Créer un barplot horizontal
         colors_map = {'GKP': '#FF6B6B', 'DEF': '#4ECDC4', 'MID': '#45B7D1', 'FWD': '#FFA07A'}
@@ -115,7 +126,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, f'top_{n}_players.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color2)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()
@@ -127,6 +138,11 @@ class FPLExploratoryAnalysis:
         print("\nCréation du graphique : Prix vs Points")
         
         fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Couleur de fond personnalisée
+        bg_color3 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color3)  
+        ax.set_facecolor("#dfe9e4ff")
         
         # Scatter plot par position
         positions = df['position'].unique()
@@ -148,7 +164,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, 'price_vs_points.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color3)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()
@@ -171,6 +187,11 @@ class FPLExploratoryAnalysis:
         corr_matrix = df[available_cols].corr()
         
         fig, ax = plt.subplots(figsize=(12, 10))
+
+        # Couleur de fond personnalisée
+        bg_color4 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color4)  
+        ax.set_facecolor("#dfe9e4ff")
         
         sns.heatmap(corr_matrix, annot=True, fmt='.2f', cmap='coolwarm', 
                    center=0, square=True, linewidths=1, 
@@ -182,7 +203,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, 'correlation_matrix.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color4)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()
@@ -194,6 +215,12 @@ class FPLExploratoryAnalysis:
         print("\nCréation du graphique : Goals et Assists per 90 par position")
         
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+        # Couleur de fond personnalisée
+        bg_color5 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color5)  
+        ax1.set_facecolor("#dfe9e4ff")
+        ax2.set_facecolor("#dfe9e4ff")
         
         positions = ['GKP', 'DEF', 'MID', 'FWD']
         
@@ -228,7 +255,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, 'goals_assists_per_90.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color5)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()
@@ -244,6 +271,11 @@ class FPLExploratoryAnalysis:
         ].copy()
         
         fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Couleur de fond personnalisée
+        bg_color6 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color6)  
+        ax.set_facecolor("#dfe9e4ff")
         
         colors_map = {'GKP': '#FF6B6B', 'DEF': '#4ECDC4', 'MID': '#45B7D1', 'FWD': '#FFA07A'}
         colors = [colors_map.get(pos, '#95A5A6') for pos in top_value['position']]
@@ -266,7 +298,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, f'top_{n}_value_players.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color6)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()
@@ -278,6 +310,12 @@ class FPLExploratoryAnalysis:
         print("\nCréation du graphique : Distribution fixture difficulty")
         
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+        # Couleur de fond personnalisée
+        bg_color7 = "#dfe9e4ff"          
+        fig.patch.set_facecolor(bg_color7)  
+        ax1.set_facecolor("#dfe9e4ff")  
+        ax2.set_facecolor("#dfe9e4ff") 
         
         # Next fixture difficulty
         if 'next_fixture_difficulty' in df.columns:
@@ -320,7 +358,7 @@ class FPLExploratoryAnalysis:
         
         if save:
             filepath = os.path.join(self.output_dir, 'fixture_difficulty_distribution.png')
-            plt.savefig(filepath, dpi=300, bbox_inches='tight')
+            plt.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=bg_color7)
             print(f"Figure sauvegardée : {filepath}")
         
         plt.close()

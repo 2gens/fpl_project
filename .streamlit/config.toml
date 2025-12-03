@@ -1,0 +1,18 @@
+[theme]
+# Couleur principale (boutons, accents)
+primaryColor = "#d51212ff"
+
+# Couleur de fond de la page
+backgroundColor = "#ffffffff"
+
+# Couleur de fond des éléments (cartes, sidebar)
+secondaryBackgroundColor = "#bbc5d7ff"
+
+# Couleur du texte
+textColor = "#262730"
+
+# Police
+font = "sans serif"
+
+[server]
+headless = true

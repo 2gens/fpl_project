@@ -78,6 +78,7 @@ fpl_project/
     
     tests/                                  -> Unit tests
 
+    app.py                                  -> Web interface
     main.py                                 -> Entry point (run all the project)
     PROPOSAL.md                             -> Proposal 
     README.md                               -> Readme
@@ -141,6 +142,9 @@ requests==2.32.3
 
 # Testing
 pytest==8.3.3
+
+# Web interface
+streamlit==1.40.1
 
 ```
 
