@@ -27,8 +27,9 @@ def load_predictions():
     formula_path = predictions_dir / "predictions_formula.csv"
     
     if not ml_path.exists() or not formula_path.exists():
-        st.error("Prediction pas trouvé. Run 'python main.py' d'abord.")
-        return None, None
+        with st.spinner("Generating predictions... This may take 2 minutes."):
+            import subprocess
+            subprocess.run(["python", "main.py"], check=True)
     
     df_ml = pd.read_csv(ml_path)
     df_formula = pd.read_csv(formula_path)
