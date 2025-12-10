@@ -104,13 +104,17 @@ def main():
     predictor = FPLPredictor()
     df = predictor.load_player_data()
 
-
-    print("\nPrédictions Machine Learning...")
     df_ml = predictor.predict_points_ml(df)
 
+    if df_ml is not None:
+        predictor.save_predictions(df_ml, filename="predictions_ml.csv")
+        print("Prédictions ML sauvegardées")
 
-    print("\nPrédictions Formule pondérée...")
     df_formula = predictor.predict_points_formula(df)
+
+    if df_formula is not None:
+        predictor.save_predictions(df_formula, filename="predictions_formula.csv")
+        print("Prédictions Formule sauvegardées")
     
     
     # Etape 7 : Comparaison des deux méthodes
