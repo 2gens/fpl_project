@@ -133,7 +133,10 @@ def main():
             print("Analyse comparative des TOP 20 :")
             
             print(f"\nJoueurs présents dans les deux TOP 30 : {len(common)}/20")
-            print(f"Cohérence entre les méthodes : {len(common)*20}%")
+            
+            coherence = (len(common) / 20) * 100
+            print(f"Cohérence entre les méthodes : {coherence:.0f}%")
+            
             
             print("\nJoueurs communs :")
             for player in sorted(common):
