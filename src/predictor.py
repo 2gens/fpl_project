@@ -49,7 +49,9 @@ class FPLPredictor:
             'price', 'selected_by_percent',
             'goals_scored', 'assists', 'clean_sheets', 'bonus',
             'yellow_cards', 'red_cards',
-            'penalties_order', 'corners_and_indirect_freekicks_order','expected_points_per_90',
+            'penalties_order', 'corners_and_indirect_freekicks_order','expected_points_per_90', 'xM_factor', 'recent_5_minutes_ratio', 
+            'historical_minutes_ratio', 'smart_adjustment', 'next_fixture_home',
+
         ]
         if 'expected_goals' in df.columns:
             feature_cols.append('expected_goals')

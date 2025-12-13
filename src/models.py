@@ -75,6 +75,10 @@ class FPLModelTrainer:
 
             # Expected stats
             'expected_points_per_90',
+
+            # Features avancées -> mode pro 
+            'xM_factor', 'recent_5_minutes_ratio', 
+            'historical_minutes_ratio', 'smart_adjustment', 'next_fixture_home',
         ]
         
         # Ajouter expected stats si disponibles

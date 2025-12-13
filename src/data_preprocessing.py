@@ -64,15 +64,24 @@ class FPLDataPreprocessor:
         # Filtrer : garder seulement ceux avec >= min_minutes
         df_filtered = df[df['minutes'] >= self.min_minutes].copy()
         
-        # Filtrer les joueurs blessés (chance_of_playing < 25%)
+        # Filtrer les joueurs blessés (chance_of_playing < 50%)
+
         if 'chance_of_playing_this_round' in df_filtered.columns:
             n_before_injury = len(df_filtered)
+
             df_filtered = df_filtered[
-            (df_filtered['chance_of_playing_this_round'].isna()) | 
-            (df_filtered['chance_of_playing_this_round'] >= 25)].copy()
+                (
+                    (df_filtered['chance_of_playing_this_round'].isna()) | 
+                    (df_filtered['chance_of_playing_this_round'] >= 50)
+                ) & 
+                (
+                (df_filtered['chance_of_playing_next_round'].isna()) | 
+                (df_filtered['chance_of_playing_next_round'] >= 50)
+                )
+            ].copy()
         
-        n_injured = n_before_injury - len(df_filtered)
-        print(f"Joueurs blessés éliminés : {n_injured}")
+            n_injured = n_before_injury - len(df_filtered)
+            print(f"Joueurs blessés éliminés : {n_injured}")
 
         # Nombre de joueurs après filtrage
         n_after = len(df_filtered)
@@ -198,6 +207,48 @@ class FPLDataPreprocessor:
     
         return df
         
+    def add_recent_minutes(self, df: pd.DataFrame, raw_data: Dict) -> pd.DataFrame:
+        """
+        Ajoute les minutes des 5 derniers matchs pour chaque joueur.
+        """
+        import requests
+    
+        recent_minutes_list = []
+    
+        for idx, row in df.iterrows():
+            player_id = row['id']
+        
+            # Récupérer l'historique du joueur depuis l'API
+            url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
+        
+            try:
+                response = requests.get(url, timeout=5)
+            
+                if response.status_code == 200:
+                    data = response.json()
+                    history = data.get('history', [])
+                
+                    # Trier par gameweek (plus récent d'abord)
+                    history_sorted = sorted(history, key=lambda x: x['round'], reverse=True)
+                
+                    # Prendre les 5 derniers matchs
+                    last_5 = history_sorted[:5]
+                
+                    # Somme des minutes
+                    total_minutes_last_5 = sum(match['minutes'] for match in last_5)
+                
+                    recent_minutes_list.append(total_minutes_last_5)
+                else:
+                    recent_minutes_list.append(0)
+        
+            except Exception as e:
+                print(f"rreur pour joueur {player_id}: {e}")
+                recent_minutes_list.append(0)
+    
+        df['recent_5_minutes'] = recent_minutes_list
+        print(f"Minutes récentes ajoutées pour {len(df)} joueurs")
+    
+        return df
     
     def engineer_fixture_features(self, df: pd.DataFrame, raw_data: Dict) -> pd.DataFrame:
         """
@@ -294,15 +345,95 @@ class FPLDataPreprocessor:
             df['points_per_game'] * 0.2          
         )
     
-        # Ajuster selon la difficulté du prochain match
-        fixture_adjustment = df['next_fixture_difficulty'].apply(
-            lambda x: 1.2 if x <= 2 else 1.0 if x == 3 else 0.85
-        )
-    
-        df['recent_performance_score'] = df['recent_performance_score'] * fixture_adjustment
-    
         print("Recent performance score calculé (target pour ML)")
+
+      
+        # Expected minutes (xM) - avec momentum
         
+        # 1. Temps de jeu historique (total minutes jouées)
+        max_possible_minutes = df['minutes'].max()
+        df['historical_minutes_ratio'] = (df['minutes'] / max_possible_minutes).clip(upper=1.0)
+
+        # 2. Temps de jeu récent (5 derniers matchs)
+        df['recent_5_minutes_ratio'] = (df['recent_5_minutes'] / 450).clip(upper=1.0)  # 5 matchs × 90 min
+
+        # 3. xM final = Moyenne pondérée (70% récent, 30% historique)
+        df['xM_factor'] = (
+    df['recent_5_minutes_ratio'] * 0.7 +
+    df['historical_minutes_ratio'] * 0.3
+).clip(lower=0.3, upper=1.0)
+
+        print(f" xM avec momentum appliqué (données réelles !)")
+        print(f" Joueurs avec xM < 0.5 (rotation risk) : {(df['xM_factor'] < 0.5).sum()}")
+        print(f" Moyenne xM_factor : {df['xM_factor'].mean():.2f}")
+
+        # Team strength (home/away)
+
+        # Extraire les forces d'attaque et de défense de chaque équipe
+        teams = raw_data['bootstrap']['teams']
+
+        # Créer les mappings team_id → strength
+        team_attack_home = {t['id']: t['strength_attack_home'] for t in teams}
+        team_attack_away = {t['id']: t['strength_attack_away'] for t in teams}
+        team_defence_home = {t['id']: t['strength_defence_home'] for t in teams}
+        team_defence_away = {t['id']: t['strength_defence_away'] for t in teams}
+
+        # Calculer la moyenne de la ligue
+        league_avg_attack = sum(team_attack_home.values()) / len(team_attack_home)
+        league_avg_defence = sum(team_defence_home.values()) / len(team_defence_home)
+
+        print(f"   Moyenne ligue - Attaque: {league_avg_attack:.0f}, Défense: {league_avg_defence:.0f}")
+
+        # Créer mapping nom → ID
+        team_name_to_id = {t['name']: t['id'] for t in teams}
+        df['opponent_team_id'] = df['next_fixture_opponent'].map(team_name_to_id)
+
+        # Calculer l'ajustement intelligent
+
+        def calculate_adjustment_for_row(row):
+    
+            opponent_id = row['opponent_team_id']
+    
+            # Si pas d'adversaire connu, pas d'ajustement
+            if pd.isna(opponent_id):
+                return 1.0
+    
+            opponent_id = int(opponent_id)
+            is_home = row['next_fixture_home']
+            position = row['position']
+    
+            # Récupérer les forces de l'adversaire
+            if is_home:
+                # Le joueur est à domicile → adversaire est away
+                opponent_attack = team_attack_away.get(opponent_id, league_avg_attack)
+                opponent_defence = team_defence_away.get(opponent_id, league_avg_defence)
+            else:
+                # Le joueur est away → adversaire est home
+                opponent_attack = team_attack_home.get(opponent_id, league_avg_attack)
+                opponent_defence = team_defence_home.get(opponent_id, league_avg_defence)
+    
+            # Calculer ajustement selon position
+            if position in ['FWD', 'MID']:
+                # FWD et MID : Impactés par la défense adverse
+                adjustment = league_avg_defence / opponent_defence
+    
+            elif position == 'DEF':
+                # DEF : Impactés par l'attaque adverse (clean sheet)
+                adjustment = league_avg_attack / opponent_attack
+    
+            elif position == 'GK':
+                # GK : Très impactés par l'attaque adverse
+                adjustment = league_avg_attack / opponent_attack 
+    
+            else:
+                adjustment = 1.0
+    
+            # Clipper pour éviter extrêmes
+            return max(0.7, min(1.3, adjustment))
+
+        # Appliquer la fonction à chaque ligne du DataFrame
+        df['smart_adjustment'] = df.apply(calculate_adjustment_for_row, axis=1)
+
         return df
     
     def select_important_columns(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -324,6 +455,9 @@ class FPLDataPreprocessor:
             'clean_sheets', 'goals_conceded', 'own_goals',
             'penalties_saved', 'penalties_missed', 'yellow_cards', 'red_cards',
             'saves', 'bonus', 'bps',
+
+            # Disponibilité 
+            'chance_of_playing_this_round', 'chance_of_playing_next_round',
             
             # Forme et indices
             'form', 'points_per_game', 'ict_index',
@@ -343,6 +477,10 @@ class FPLDataPreprocessor:
             # Fixtures
             'next_fixture_difficulty', 'next_fixture_opponent', 
             'next_fixture_home', 'avg_fixture_difficulty_5',
+
+            #Features avancées pour le ML 
+            'xM_factor', 'recent_5_minutes', 'recent_5_minutes_ratio', 
+            'historical_minutes_ratio', 'smart_adjustment', 'opponent_team_id', 
         ]
         
         # Garder seulement les colonnes qui existent
@@ -405,6 +543,9 @@ def quick_preprocess(min_minutes: int = 60, save: bool = True) -> Optional[pd.Da
     
     # Feature Performances
     df = preprocessor.engineer_performance_features(df)
+
+    # Ajouter les minutes récentes -> des 5 derniers matchs
+    df = preprocessor.add_recent_minutes(df, raw_data)
     
     # Feature Fixtures
     df = preprocessor.engineer_fixture_features(df, raw_data)
