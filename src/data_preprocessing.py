@@ -206,44 +206,34 @@ class FPLDataPreprocessor:
     
     
         return df
-        
+    
     def add_recent_minutes(self, df: pd.DataFrame, raw_data: Dict) -> pd.DataFrame:
         """
-        Ajoute les minutes des 5 derniers matchs pour chaque joueur.
+        Ajoute les minutes des 5 derniers matchs pour chaque joueur. 
+        (Utilisation de ThreadPoolExecutor pour paralléliser les requêtes API)
         """
         import requests
+        from concurrent.futures import ThreadPoolExecutor
     
-        recent_minutes_list = []
-    
-        for idx, row in df.iterrows():
-            player_id = row['id']
-        
-            # Récupérer l'historique du joueur depuis l'API
+        def fetch_player_minutes(player_id):
             url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
-        
             try:
                 response = requests.get(url, timeout=5)
-            
                 if response.status_code == 200:
                     data = response.json()
                     history = data.get('history', [])
-                
-                    # Trier par gameweek (plus récent d'abord)
+                    # trier par gameweek (plus récent d'abord)
                     history_sorted = sorted(history, key=lambda x: x['round'], reverse=True)
-                
-                    # Prendre les 5 derniers matchs
+                    #Prendre les 5 derniers matchs
                     last_5 = history_sorted[:5]
-                
-                    # Somme des minutes
-                    total_minutes_last_5 = sum(match['minutes'] for match in last_5)
-                
-                    recent_minutes_list.append(total_minutes_last_5)
-                else:
-                    recent_minutes_list.append(0)
-        
-            except Exception as e:
-                print(f"rreur pour joueur {player_id}: {e}")
-                recent_minutes_list.append(0)
+                    #Somme des minutes
+                    return sum(match['minutes'] for match in last_5)
+                return 0
+            except:
+                return 0
+    
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            recent_minutes_list = list(executor.map(fetch_player_minutes, df['id']))
     
         df['recent_5_minutes'] = recent_minutes_list
         print(f"Minutes récentes ajoutées pour {len(df)} joueurs")

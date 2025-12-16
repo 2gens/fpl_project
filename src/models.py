@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from scipy.stats import spearmanr
 import xgboost as xgb
 import json
 import os
@@ -239,13 +240,15 @@ class FPLModelTrainer:
         mae = mean_absolute_error(y_test, y_pred)
         rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         r2 = r2_score(y_test, y_pred)
+        spearman_corr, _ = spearmanr(y_test, y_pred)
         
         # Stocker les résultats
         results = {
             'model': model_name,
             'mae': mae,
             'rmse': rmse,
-            'r2': r2
+            'r2': r2,
+            'spearman': spearman_corr
         }
         
         self.results[model_name] = results
@@ -313,7 +316,7 @@ class FPLModelTrainer:
         results_df = results_df.sort_values('mae')
         
         print("\nClassement par MAE (Mean Absolute Error) :")
-        print(results_df[['mae', 'rmse', 'r2']].to_string())
+        print(results_df[['mae', 'rmse', 'r2', 'spearman']].to_string())
         
         # Meilleur modèle
         best_model = results_df.index[0]
