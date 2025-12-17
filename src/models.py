@@ -78,7 +78,7 @@ class FPLModelTrainer:
             'expected_points_per_90',
 
             # Features avancées -> mode pro 
-            'xM_factor', 'recent_5_minutes_ratio', 
+            'xM_factor', 'recent_5_minutes_ratio', 'recent_3_minutes_ratio',
             'historical_minutes_ratio', 'smart_adjustment', 'next_fixture_home',
         ]
         

@@ -215,7 +215,7 @@ class FPLDataPreprocessor:
         import requests
         from concurrent.futures import ThreadPoolExecutor
     
-        def fetch_player_minutes(player_id):
+        def fetch_player_minutes_5(player_id):
             url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
             try:
                 response = requests.get(url, timeout=5)
@@ -231,11 +231,31 @@ class FPLDataPreprocessor:
                 return 0
             except:
                 return 0
+            
+        def fetch_player_minutes_3(player_id):
+            url = f"https://fantasy.premierleague.com/api/element-summary/{player_id}/"
+            try:
+                response = requests.get(url, timeout=4)
+                if response.status_code == 200:
+                    data = response.json()
+                    history = data.get('history', [])
+                    history_sorted = sorted(history, key=lambda x: x['round'], reverse=True)
+                    last_3 = history_sorted[:3]  
+                    return sum(match['minutes'] for match in last_3)
+                return 0
+            except:
+                return 0
     
         with ThreadPoolExecutor(max_workers=10) as executor:
-            recent_minutes_list = list(executor.map(fetch_player_minutes, df['id']))
+            recent_minutes_list_5 = list(executor.map(fetch_player_minutes_5, df['id']))
+
+        df['recent_5_minutes'] = recent_minutes_list_5
+
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            recent_minutes_list_3 = list(executor.map(fetch_player_minutes_3, df['id']))
     
-        df['recent_5_minutes'] = recent_minutes_list
+        df['recent_3_minutes'] = recent_minutes_list_3
+
         print(f"Minutes récentes ajoutées pour {len(df)} joueurs")
     
         return df
@@ -340,18 +360,22 @@ class FPLDataPreprocessor:
       
         # Expected minutes (xM) - avec momentum
         
-        # 1. Temps de jeu historique (total minutes jouées)
+        # Temps de jeu historique (total minutes jouées)
         max_possible_minutes = df['minutes'].max()
         df['historical_minutes_ratio'] = (df['minutes'] / max_possible_minutes).clip(upper=1.0)
 
-        # 2. Temps de jeu récent (5 derniers matchs)
+        # Temps de jeu récent (5 derniers matchs)
         df['recent_5_minutes_ratio'] = (df['recent_5_minutes'] / 450).clip(upper=1.0)  # 5 matchs × 90 min
 
-        # 3. xM final = Moyenne pondérée (70% récent, 30% historique)
+        # Temps de jeu récent (3 derniers matchs)
+        df['recent_3_minutes_ratio'] = (df['recent_3_minutes'] / 270).clip(upper=1.0)  # 3 matchs × 90 min
+
+        # xM final = Moyenne pondérée (70% récent, 30% historique)
         df['xM_factor'] = (
-    df['recent_5_minutes_ratio'] * 0.7 +
-    df['historical_minutes_ratio'] * 0.3
-).clip(lower=0.3, upper=1.0)
+            df['recent_3_minutes_ratio'] * 0.5 +
+            df['recent_5_minutes_ratio'] * 0.3 +
+            df['historical_minutes_ratio'] * 0.2
+        ).clip(lower=0.3, upper=1.0)
 
         print(f" xM avec momentum appliqué (données réelles !)")
         print(f" Joueurs avec xM < 0.5 (rotation risk) : {(df['xM_factor'] < 0.5).sum()}")
@@ -419,7 +443,7 @@ class FPLDataPreprocessor:
                 adjustment = 1.0
     
             # Clipper pour éviter extrêmes
-            return max(0.7, min(1.3, adjustment))
+            return max(0.5, min(1.5, adjustment))
 
         # Appliquer la fonction à chaque ligne du DataFrame
         df['smart_adjustment'] = df.apply(calculate_adjustment_for_row, axis=1)
@@ -469,7 +493,7 @@ class FPLDataPreprocessor:
             'next_fixture_home', 'avg_fixture_difficulty_5',
 
             #Features avancées pour le ML 
-            'xM_factor', 'recent_5_minutes', 'recent_5_minutes_ratio', 
+            'xM_factor', 'recent_5_minutes', 'recent_5_minutes_ratio', 'recent_3_minutes', 'recent_3_minutes_ratio',
             'historical_minutes_ratio', 'smart_adjustment', 'opponent_team_id', 
         ]
         
