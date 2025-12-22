@@ -443,7 +443,7 @@ class FPLDataPreprocessor:
                 adjustment = 1.0
     
             # Clipper pour éviter extrêmes
-            return max(0.5, min(1.5, adjustment))
+            return max(0.4, min(2.0, adjustment))
 
         # Appliquer la fonction à chaque ligne du DataFrame
         df['smart_adjustment'] = df.apply(calculate_adjustment_for_row, axis=1)

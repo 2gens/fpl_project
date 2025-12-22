@@ -47,6 +47,9 @@ This executes:
 6. Results saved to data/predictions/   -> predictions_formula.csv (for the weighted formula)
                                         -> predictions_ml.csv (for the Machine Learning system)
 
+```bash 
+Run the interactive dashboard: streamlit app.py 
+```                                        
 
 
 ## Project Structure
