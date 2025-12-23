@@ -183,9 +183,14 @@ class FPLPredictor:
             df_pred.loc[mask_decline_severe, 'momentum'] * 3.0
         )
 
-        # Niveau 3 : Fixture difficile (pénalité additionnelle)
+        # Niveau 3 : Fixture facile (bonus) ou difficile (pénalité additionnelle)
+
+        mask_very_easy = df_pred['next_fixture_difficulty'] <= 2
+        df_pred.loc[mask_very_easy, 'fixture_penalty'] = 0.5
+
         mask_difficult_fixture = df_pred['next_fixture_difficulty'] >= 4
         mask_very_difficult = df_pred['next_fixture_difficulty'] == 5
+        
         
         df_pred.loc[mask_difficult_fixture, 'fixture_penalty'] = -0.5
        
