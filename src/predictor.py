@@ -160,6 +160,38 @@ class FPLPredictor:
         df_pred = df.copy()
     
         df_pred['predicted_points'] = predictions_weighted
+
+        # Système de pénalité basé sur le momentum et xM
+        print("\nApplication du système de pénalité momentum/xM...")
+        
+        df_pred['momentum_penalty'] = 0
+        
+        # Niveau 1 : Momentum négatif seul (pénalité modérée)
+        mask_negative_momentum = df_pred['momentum'] < -0.2
+        df_pred.loc[mask_negative_momentum, 'momentum_penalty'] = (
+            df_pred.loc[mask_negative_momentum, 'momentum'] * 1.3
+        )
+
+        # Niveau 2 : Momentum négatif + moins de temps de jeu (pénalité sévère)
+        minutes_decline = (
+            df_pred['recent_3_minutes_ratio'] < (df_pred['recent_5_minutes_ratio'] - 0.15)
+        )
+        
+        mask_decline_severe = (df_pred['momentum'] < -0.3) & minutes_decline
+        df_pred.loc[mask_decline_severe, 'momentum_penalty'] = (
+            df_pred.loc[mask_decline_severe, 'momentum'] * 3.0
+        )
+        
+        # Appliquer la pénalité
+        df_pred['predicted_points'] = (
+            df_pred['predicted_points'] + df_pred['momentum_penalty']
+        )
+        
+        # Stats
+        nb_penalise_modere = mask_negative_momentum.sum()
+        nb_penalise_severe = mask_decline_severe.sum()
+        print(f"Pénalité modérée (×1.5) : {nb_penalise_modere} joueurs")
+        print(f"Pénalité sévère (×3.5) : {nb_penalise_severe} joueurs")
     
         df_pred['predicted_value'] = df_pred['predicted_points'] / df_pred['price']
     

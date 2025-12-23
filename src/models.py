@@ -405,6 +405,30 @@ def train_all_models(min_minutes: int = 60, test_size: float = 0.2) -> FPLModelT
         importance_df = trainer.get_feature_importance(model_name, top_n=10)
         if importance_df is not None:
             print(importance_df.to_string(index=False))
+
+
+    print("Réentrainement sur 100% des données")
+    
+    # Rescale toutes les données (100%)
+    X_scaled_full = trainer.scaler.fit_transform(X)
+    
+    # Réentraîner chaque modèle sur 100%
+    print("\nRéentraînement Linear Regression sur 100%...")
+    trainer.models['Linear Regression'].fit(X_scaled_full, y)
+    
+    print("Réentraînement Ridge Regression sur 100%...")
+    trainer.models['Ridge Regression'].fit(X_scaled_full, y)
+    
+    print("Réentraînement Random Forest sur 100%...")
+    trainer.models['Random Forest'].fit(X, y)
+    
+    print("Réentraînement XGBoost sur 100%...")
+    trainer.models['XGBoost'].fit(X, y)
+    
+    print("Réentraînement Gradient Boosting sur 100%...")
+    trainer.models['Gradient Boosting'].fit(X, y)
+    
+    print("\nTous les modèles ont été réentraînés sur 100% des données !")
     
     print("Sauvegarde des modèles entraînés...")
     trainer.save_models()
