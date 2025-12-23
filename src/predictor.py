@@ -161,10 +161,11 @@ class FPLPredictor:
     
         df_pred['predicted_points'] = predictions_weighted
 
-        # Système de pénalité basé sur le momentum et xM
+        # Système de pénalité 
         print("\nApplication du système de pénalité momentum/xM...")
         
         df_pred['momentum_penalty'] = 0
+        df_pred['fixture_penalty'] = 0
         
         # Niveau 1 : Momentum négatif seul (pénalité modérée)
         mask_negative_momentum = df_pred['momentum'] < -0.2
@@ -181,10 +182,23 @@ class FPLPredictor:
         df_pred.loc[mask_decline_severe, 'momentum_penalty'] = (
             df_pred.loc[mask_decline_severe, 'momentum'] * 3.0
         )
+
+        # Niveau 3 : Fixture difficile (pénalité additionnelle)
+        mask_difficult_fixture = df_pred['next_fixture_difficulty'] >= 4
+        mask_very_difficult = df_pred['next_fixture_difficulty'] == 5
         
-        # Appliquer la pénalité
+        df_pred.loc[mask_difficult_fixture, 'fixture_penalty'] = -0.5
+       
+        df_pred.loc[mask_very_difficult, 'fixture_penalty'] = -1.0
+        
+        
+        # Appliquer les pénalités
+        df_pred['total_penalty'] = (
+            df_pred['momentum_penalty'] + df_pred['fixture_penalty']
+        )
+        
         df_pred['predicted_points'] = (
-            df_pred['predicted_points'] + df_pred['momentum_penalty']
+            df_pred['predicted_points'] + df_pred['total_penalty']
         )
         
         # Stats
