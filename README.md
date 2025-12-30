@@ -10,7 +10,7 @@ Email: [evan.dejean@unil.ch]
 
 ## Research Question
 
-Which Fantasy Premier League players will score the most points in the next gameweek, based on historical performance data, recent form, and upcoming fixture difficulty? And which ones have the best points-to-price ratio?
+Which Fantasy Premier League players will score the most points in the next gameweek, based on historical performance data, recent form, and upcoming fixture difficulty? 
 
 
 ## Setup
@@ -114,6 +114,8 @@ Key predictive features (by importance):
 5. Momentum (form trend)
 
 Predictions for the next gameweek are saved in data/predictions/ with columns for player name, team, position, price, and predicted points. There are two rankings of players with the best potential : one in data/predictions/predictions_formula.csv for the wighted formula system and one in data/predictions/predictions_ml.csv for the machine learning system. 
+
+All results are in the Streamlit dashboard (the machine learning ranking, the wighted formula ranking and all the EDA vizualisations)
 
 Detailed analysis and interpretation are provided in the technical report.
 
