@@ -16,6 +16,9 @@ Which Fantasy Premier League players will score the most points in the next game
 ## Setup
 
 ```bash
+## Requirements
+- Python 3.9 or higher
+
 # Clone the repository:
 
 git clone https://github.com/2gens/fpl_project.git
