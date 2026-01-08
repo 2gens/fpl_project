@@ -25,7 +25,17 @@ cd fpl_project
 # Create and activate a virtual environment:
 
 python -m venv .venv
+
+# Activate (choose based on your OS):
+
+# Windows PowerShell:
 .\.venv\Scripts\Activate.ps1
+
+# Windows CMD:
+.venv\Scripts\activate.bat
+
+# Mac/Linux:
+source .venv/bin/activate
 
 
 # Install dependencies:
