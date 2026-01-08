@@ -48,7 +48,7 @@ This executes:
                                         -> predictions_ml.csv (for the Machine Learning system)
 
 ```bash 
-Run the interactive dashboard: streamlit app.py 
+Run the interactive dashboard: streamlit run app.py 
 ```                                        
 
 
